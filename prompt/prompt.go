@@ -12,6 +12,7 @@ import (
 
 	"github.com/briandowns/spinner"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/go-github/github"
@@ -21,9 +22,10 @@ import (
 )
 
 var (
-	user     *github.User
+	profile  *github.User
 	repoName string
 	err      error
+	repoURL  string
 	r        *git.Repository
 )
 
@@ -48,14 +50,11 @@ func RepoPrompt(pat string) bool {
 		os.Exit(0)
 	}
 
-	fmt.Println(repoName)
-
 	repoDescPrompt := promptui.Prompt{
 		Label: "Optionally enter your repository description",
 	}
 
 	repoDesc, _ := repoDescPrompt.Run()
-	fmt.Println(repoDesc)
 
 	repoStatusPrompt := promptui.Select{
 		Label: "Public or Private",
@@ -69,13 +68,12 @@ func RepoPrompt(pat string) bool {
 		repoStatusBool = true
 	}
 
-	fmt.Println(repoStatus)
-
 	s := spinner.New(spinner.CharSets[33], 100*time.Millisecond) // Build our new spinner
 	s.Suffix = fmt.Sprint(chalk.Yellow.NewStyle().Style(" Creating the repo..."))
 	s.Color("yellow", "bold") // Set the spinner color to a bold re
-
+	s.FinalMSG = fmt.Sprint(chalk.Green.NewStyle().WithTextStyle(chalk.Bold).Style("Successfully created new repo"))
 	s.Start()
+	time.Sleep(100 * time.Millisecond)
 
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: pat})
@@ -92,9 +90,11 @@ func RepoPrompt(pat string) bool {
 		return false
 	}
 
-	user = repo.GetOwner()
+	user := repo.GetOwner()
+	profile, _, err = client.Users.Get(ctx, *user.Login)
 
-	s.FinalMSG = fmt.Sprint(chalk.Green.NewStyle().WithTextStyle(chalk.Bold).Style("Successfully created new repo: " + repo.GetName()))
+	repoURL = repo.GetCloneURL()
+
 	s.Stop()
 
 	return true
@@ -105,7 +105,7 @@ func RepoPrompt(pat string) bool {
 // 2. Get the gitignore file from GitHub if avaliable and write it to your the folder.
 // 3. Init the commit with a commit msg
 func InitCommit(pat string) (string, error) {
-	username := *user.Login
+	username := profile.GetLogin()
 	directory := repoName
 	err := os.Mkdir(directory, 0755)
 
@@ -134,8 +134,9 @@ func InitCommit(pat string) (string, error) {
 
 	commit, err := w.Commit("[Init]: Initalised Repostiory", &git.CommitOptions{
 		Author: &object.Signature{
-			Name: username,
-			When: time.Now(),
+			Name:  username,
+			Email: profile.GetEmail(),
+			When:  time.Now(),
 		},
 	})
 
@@ -148,7 +149,17 @@ func InitCommit(pat string) (string, error) {
 
 // PushCommit pushses the InitCommit
 func PushCommit(pat string) (string, error) {
-	username := *user.Login
+	username := profile.GetLogin()
+
+	s := spinner.New(spinner.CharSets[8], 100*time.Millisecond)
+	s.Suffix = fmt.Sprint(chalk.Yellow.NewStyle().Style(" Pushing the commit..."))
+	s.Color("yellow", "bold") // Set the spinner color to a bold re
+	s.Start()
+
+	_, err := r.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{repoURL},
+	})
 
 	err = r.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{
@@ -158,8 +169,10 @@ func PushCommit(pat string) (string, error) {
 	})
 
 	if err != nil {
+		s.Stop()
 		return "Push Failed", err
 	}
 
+	s.Stop()
 	return "Pushed successfully", nil
 }

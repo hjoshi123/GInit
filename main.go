@@ -80,6 +80,15 @@ func main() {
 		}
 
 		fmt.Println(chalk.Green.NewStyle().WithTextStyle(chalk.Bold).Style(commitStatus))
+
+		pushStatus, err := prompt.PushCommit(result)
+
+		if err != nil {
+			fmt.Println(chalk.Red.NewStyle().WithTextStyle(chalk.Bold).Style(pushStatus + err.Error()))
+			return
+		}
+
+		fmt.Println(chalk.Green.NewStyle().WithTextStyle(chalk.Bold).Style(pushStatus))
 	} else {
 		return
 	}
