@@ -124,10 +124,18 @@ func InitCommit(pat string) (string, error) {
 		}
 	}
 
+	readmePath := filepath.Join(directory, "README.md")
+	file, err := os.Create(readmePath)
+	defer file.Close()
+
+	_, err = file.Write([]byte("# " + repoName))
+
 	r, err = git.PlainInit(repoName, false)
 	w, err := r.Worktree()
 
 	_, err = w.Add(".gitignore")
+	_, err = w.Add("README.md")
+
 	if err != nil {
 		return "Not able to git add", err
 	}
