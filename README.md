@@ -6,7 +6,7 @@ GInit is a Command line tool built using Golang to start your project. Just ente
 
 ## Install
 
-**Note**: To make this project work, the following environmental variable is necessary as GitHub has **deprecated** the Basic Auth mechanism. To create your own Personal Access Token refer[here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token). \
+**Note**: To make this project work, the following environmental variable is necessary as GitHub has **deprecated** the Basic Auth mechanism. To create your own Personal Access Token refer [here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token). \
 **`export GITHUB_PAT=<Personal Access Token>`**
 
 * To include it as a part of your project:
