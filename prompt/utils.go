@@ -8,7 +8,8 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
-// GitIgnoreContent represents the .gitignore file which
+// GitIgnoreContent represents the .gitignore file template.
+// Returns the template from GitHub's available list.
 func GitIgnoreContent() string {
 	gitIgnorePrompt := promptui.Select{
 		Label: "Select your type of project",

@@ -1,3 +1,11 @@
+// Copyright 2020 Hemant Joshi. All rights reserved.
+// Use of this source code is governed by MIT License.
+
+// Package prompt handles the prompt for creation of repository in GitHub.
+// It takes in the GitHub personal access token to create your repo and then do
+// an init commit with a README.md and .gitignore file.
+// Currently only 6 tempaltes i.e. Node, Android, Golang, Java, Python, Rails.
+// More templates will be added through Command Line arguments.
 package prompt
 
 import (
@@ -107,7 +115,7 @@ func RepoPrompt(pat string) bool {
 func InitCommit(pat string) (string, error) {
 	username := profile.GetLogin()
 	directory := repoName
-	err := os.Mkdir(directory, 0755)
+	err = os.Mkdir(directory, 0755)
 
 	gitIgnoreContent := GitIgnoreContent()
 	if gitIgnoreContent != "" {

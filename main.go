@@ -1,3 +1,9 @@
+// Copyright 2020 Hemant Joshi. All rights reserved.
+// Use of this source code is governed by MIT License.
+
+// Package main deals with the calling of functions from package prompt and displaying
+// error messages using chalk module. Command Line Arguments are not included yet
+// and will be out soon.
 package main
 
 import (
