@@ -117,7 +117,7 @@ func InitCommit(pat string) (string, error) {
 	directory := repoName
 	err = os.Mkdir(directory, 0755)
 
-	gitIgnoreContent := GitIgnoreContent()
+	gitIgnoreContent := GitIgnorePrompt()
 	if gitIgnoreContent != "" {
 		filePath := filepath.Join(directory, ".gitignore")
 		file, err := os.Create(filePath)

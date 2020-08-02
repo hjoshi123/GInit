@@ -1,16 +1,21 @@
 package prompt
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/manifoldco/promptui"
 )
 
-// GitIgnoreContent represents the .gitignore file template.
-// Returns the template from GitHub's available list.
-func GitIgnoreContent() string {
+type gitIgnoreResponse struct {
+	Name   string
+	Source string
+}
+
+// GitIgnorePrompt prompts the user to select the gitignore template and then calls
+// gitIgnoreContent to return the content of the file
+func GitIgnorePrompt() string {
 	gitIgnorePrompt := promptui.Select{
 		Label: "Select your type of project",
 		Items: []string{"Node", "Android", "Java", "Python", "Go", "Rails", "None"},
@@ -18,6 +23,12 @@ func GitIgnoreContent() string {
 
 	_, gitIgnore, _ := gitIgnorePrompt.Run()
 
+	return gitIgnoreContent(gitIgnore)
+}
+
+// GitIgnoreContent represents the .gitignore file template.
+// Returns the template from GitHub's available list.
+func gitIgnoreContent(gitIgnore string) string {
 	if gitIgnore != "None" {
 		resp, err := http.Get(fmt.Sprintf("https://api.github.com/gitignore/templates/%s", gitIgnore))
 
@@ -28,9 +39,15 @@ func GitIgnoreContent() string {
 
 		defer resp.Body.Close()
 
-		data, _ := ioutil.ReadAll(resp.Body)
+		gitIgnoreResp := new(gitIgnoreResponse)
+		err = json.NewDecoder(resp.Body).Decode(&gitIgnoreResp)
 
-		return string(data)
+		if err != nil {
+			fmt.Println(err)
+			return ""
+		}
+
+		return gitIgnoreResp.Source
 	}
 
 	return ""
