@@ -9,7 +9,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"html"
 	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -27,6 +31,8 @@ func init() {
 }
 
 func main() {
+	handleControlC()
+
 	myFigure := figure.NewColorFigure("GInit", "", "yellow", true)
 	myFigure.Print()
 
@@ -95,7 +101,23 @@ func main() {
 		}
 
 		fmt.Println(chalk.Green.NewStyle().WithTextStyle(chalk.Bold).Style(pushStatus))
+
+		fmt.Println()
+
+		str := html.UnescapeString("&#" + strconv.Itoa(129395) + ";")
+		fmt.Println(chalk.Yellow.NewStyle().WithTextStyle(chalk.Bold).Style("You're good to go.. Happy Hacking " + str))
+		fmt.Println()
 	} else {
 		return
 	}
+}
+
+func handleControlC() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		// Run Cleanup
+		os.Exit(1)
+	}()
 }

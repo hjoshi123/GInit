@@ -8,6 +8,8 @@
 // More templates will be added through Command Line arguments.
 package prompt
 
+// TODO Remove error msgs from Println and put erro msgs in a logger
+
 import (
 	"context"
 	"errors"
@@ -47,8 +49,9 @@ func RepoPrompt(pat string) bool {
 	}
 
 	repoNamePrompt := promptui.Prompt{
-		Label:    "Enter your repo name",
-		Validate: repoNamePromptValidation,
+		Label:     "Enter your repo name",
+		Templates: promptTemplate,
+		Validate:  repoNamePromptValidation,
 	}
 
 	repoName, err = repoNamePrompt.Run()
@@ -59,17 +62,27 @@ func RepoPrompt(pat string) bool {
 	}
 
 	repoDescPrompt := promptui.Prompt{
-		Label: "Optionally enter your repository description",
+		Label:     "Optionally enter your repository description",
+		Templates: promptTemplate,
 	}
 
-	repoDesc, _ := repoDescPrompt.Run()
+	repoDesc, err := repoDescPrompt.Run()
+	if err != nil {
+		fmt.Println(chalk.Red.NewStyle().WithBackground(chalk.White).WithTextStyle(chalk.Bold).Style(err.Error()))
+		os.Exit(0)
+	}
 
 	repoStatusPrompt := promptui.Select{
-		Label: "Public or Private",
-		Items: []string{"Public", "Private"},
+		Label:     "Public or Private",
+		Templates: selectTemplate,
+		Items:     []string{"Public", "Private"},
 	}
 
-	_, repoStatus, _ := repoStatusPrompt.Run()
+	_, repoStatus, err := repoStatusPrompt.Run()
+	if err != nil {
+		fmt.Println(chalk.Red.NewStyle().WithBackground(chalk.White).WithTextStyle(chalk.Bold).Style(err.Error()))
+		os.Exit(0)
+	}
 
 	var repoStatusBool bool = false
 	if repoStatus == "Private" {

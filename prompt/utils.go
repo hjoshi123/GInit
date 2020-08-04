@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/manifoldco/promptui"
+	"github.com/ttacon/chalk"
 )
 
 type gitIgnoreResponse struct {
@@ -13,15 +15,40 @@ type gitIgnoreResponse struct {
 	Source string
 }
 
+var (
+	// promptTemplate which displays green tick when the input is valid and red text when it
+	// is invalid. `.` indicates the text to be displayed.
+	promptTemplate = &promptui.PromptTemplates{
+		Prompt:  "{{ . }} ",
+		Valid:   "{{ . | green }} ",
+		Invalid: "{{ . | red }} ",
+		Success: fmt.Sprintf("%s {{ . }} ", promptui.Styler(promptui.FGGreen)("✔")),
+	}
+
+	// selectTemplate displays white tick and blurs the other options when selected it shows
+	// green tick and displays it in bold.
+	selectTemplate = &promptui.SelectTemplates{
+		Label:    "{{ . }}?",
+		Active:   fmt.Sprintf("%s {{ . }} ", promptui.Styler(promptui.FGWhite)("✔")),
+		Inactive: "{{ . | cyan }}",
+		Selected: fmt.Sprintf("%s {{ . | bold }} ", promptui.Styler(promptui.FGGreen)("✔")),
+	}
+)
+
 // GitIgnorePrompt prompts the user to select the gitignore template and then calls
 // gitIgnoreContent to return the content of the file
 func GitIgnorePrompt() string {
 	gitIgnorePrompt := promptui.Select{
-		Label: "Select your type of project",
-		Items: []string{"Node", "Android", "Java", "Python", "Go", "Rails", "None"},
+		Label:     "Select your type of project",
+		Templates: selectTemplate,
+		Items:     []string{"Node", "Android", "Java", "Python", "Go", "Rails", "None"},
 	}
 
-	_, gitIgnore, _ := gitIgnorePrompt.Run()
+	_, gitIgnore, err := gitIgnorePrompt.Run()
+	if err != nil {
+		fmt.Println(chalk.Red.NewStyle().WithBackground(chalk.White).WithTextStyle(chalk.Bold).Style(err.Error()))
+		os.Exit(0)
+	}
 
 	return gitIgnoreContent(gitIgnore)
 }
