@@ -11,7 +11,6 @@ package prompt
 // TODO Remove error msgs from Println and put erro msgs in a logger
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -28,11 +27,11 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/manifoldco/promptui"
 	"github.com/ttacon/chalk"
-	"golang.org/x/oauth2"
 )
 
 var (
 	profile  *github.User
+	repo     *github.Repository
 	repoName string
 	err      error
 	repoURL  string
@@ -50,7 +49,7 @@ func RepoPrompt(pat string) bool {
 
 	repoNamePrompt := promptui.Prompt{
 		Label:     "Enter your repo name",
-		Templates: promptTemplate,
+		Templates: PromptTemplate,
 		Validate:  repoNamePromptValidation,
 	}
 
@@ -63,7 +62,7 @@ func RepoPrompt(pat string) bool {
 
 	repoDescPrompt := promptui.Prompt{
 		Label:     "Optionally enter your repository description",
-		Templates: promptTemplate,
+		Templates: PromptTemplate,
 	}
 
 	repoDesc, err := repoDescPrompt.Run()
@@ -96,23 +95,13 @@ func RepoPrompt(pat string) bool {
 	s.Start()
 	time.Sleep(100 * time.Millisecond)
 
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: pat})
-	tc := oauth2.NewClient(ctx, ts)
-	client := github.NewClient(tc)
-
-	r := &github.Repository{Name: &repoName, Private: &repoStatusBool, Description: &repoDesc}
-	repo, _, err := client.Repositories.Create(ctx, "", r)
+	repo, profile, err = CreateRepo(pat, repoName, repoDesc, repoStatusBool)
 
 	if err != nil {
-		log.Output(1, err.Error())
 		s.FinalMSG = fmt.Sprint(chalk.Red.NewStyle().WithTextStyle(chalk.Bold).Style("Problem creating the repo"))
 		s.Stop()
 		return false
 	}
-
-	user := repo.GetOwner()
-	profile, _, err = client.Users.Get(ctx, *user.Login)
 
 	repoURL = repo.GetCloneURL()
 
@@ -125,9 +114,25 @@ func RepoPrompt(pat string) bool {
 // 1. Clone the remote repo and store it to the location
 // 2. Get the gitignore file from GitHub if avaliable and write it to your the folder.
 // 3. Init the commit with a commit msg
-func InitCommit(pat string) (string, error) {
-	username := profile.GetLogin()
-	directory := repoName
+func InitCommit(pat string, repoParams ...string) (string, error) {
+	var (
+		username  string
+		directory string
+		email     string
+	)
+
+	if len(repoParams) > 0 {
+		// use variables from the function
+		username = repoParams[0]
+		directory = repoParams[1]
+		email = repoParams[2]
+	} else {
+		// use global variables
+		username = profile.GetLogin()
+		directory = repoName
+		email = profile.GetEmail()
+	}
+
 	err = os.Mkdir(directory, 0755)
 
 	gitIgnoreContent := GitIgnorePrompt()
@@ -149,9 +154,9 @@ func InitCommit(pat string) (string, error) {
 	file, err := os.Create(readmePath)
 	defer file.Close()
 
-	_, err = file.Write([]byte("# " + repoName))
+	_, err = file.Write([]byte("# " + directory))
 
-	r, err = git.PlainInit(repoName, false)
+	r, err = git.PlainInit(directory, false)
 	w, err := r.Worktree()
 
 	_, err = w.Add(".gitignore")
@@ -164,7 +169,7 @@ func InitCommit(pat string) (string, error) {
 	commit, err := w.Commit("[Init]: Initalised Repostiory", &git.CommitOptions{
 		Author: &object.Signature{
 			Name:  username,
-			Email: profile.GetEmail(),
+			Email: email,
 			When:  time.Now(),
 		},
 	})
@@ -177,8 +182,17 @@ func InitCommit(pat string) (string, error) {
 }
 
 // PushCommit pushses the InitCommit
-func PushCommit(pat string) (string, error) {
-	username := profile.GetLogin()
+func PushCommit(pat string, repoParams ...string) (string, error) {
+	var (
+		username string
+	)
+
+	if len(repoParams) > 0 {
+		username = repoParams[0]
+		repoURL = repoParams[1]
+	} else {
+		username = profile.GetLogin()
+	}
 
 	s := spinner.New(spinner.CharSets[8], 100*time.Millisecond)
 	s.Suffix = fmt.Sprint(chalk.Yellow.NewStyle().Style(" Pushing the commit..."))

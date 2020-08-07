@@ -1,13 +1,17 @@
 package prompt
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
+	"github.com/google/go-github/github"
 	"github.com/manifoldco/promptui"
 	"github.com/ttacon/chalk"
+	"golang.org/x/oauth2"
 )
 
 type gitIgnoreResponse struct {
@@ -16,9 +20,9 @@ type gitIgnoreResponse struct {
 }
 
 var (
-	// promptTemplate which displays green tick when the input is valid and red text when it
+	// PromptTemplate which displays green tick when the input is valid and red text when it
 	// is invalid. `.` indicates the text to be displayed.
-	promptTemplate = &promptui.PromptTemplates{
+	PromptTemplate = &promptui.PromptTemplates{
 		Prompt:  "{{ . }} ",
 		Valid:   "{{ . | green }} ",
 		Invalid: "{{ . | red }} ",
@@ -51,6 +55,28 @@ func GitIgnorePrompt() string {
 	}
 
 	return gitIgnoreContent(gitIgnore)
+}
+
+// CreateRepo creates a repo by taking in parameters and returning the repository
+// and the user's profile of GitHub
+func CreateRepo(pat, repoName, repoDesc string, privateRepo bool) (*github.Repository, *github.User, error) {
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: pat})
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
+
+	r := &github.Repository{Name: &repoName, Private: &privateRepo, Description: &repoDesc}
+	repo, _, err := client.Repositories.Create(ctx, "", r)
+
+	user := repo.GetOwner()
+	profile, _, err := client.Users.Get(ctx, *user.Login)
+
+	if err != nil {
+		log.Output(1, err.Error())
+		return nil, nil, err
+	}
+
+	return repo, profile, nil
 }
 
 // GitIgnoreContent represents the .gitignore file template.
